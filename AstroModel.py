@@ -228,7 +228,7 @@ class AstroModel:
         def recall():
             true_positives = 0
             possible_positives = 0
-            for i in range(0, 10000):
+            for i in range(0, 3000):
                 true_positives += K.argmax(
                     K.round(y_true[i] * y_pred[i])).numpy() > 0.7
                 possible_positives += K.argmax(
@@ -239,7 +239,7 @@ class AstroModel:
         def precision():
             true_positives = 0
             predicted_positives = 0
-            for i in range(0, 10000):
+            for i in range(0, 3000):
                 true_positives += K.argmax(
                     K.round(y_true[i] * y_pred[i])).numpy() > 0.7
                 predicted_positives += K.argmax(
