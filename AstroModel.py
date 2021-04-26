@@ -217,7 +217,7 @@ class AstroModel:
                      allow_pickle=True)
         self.model.load_weights('models/model_1000.h5')
         res = self.Predict(xv)
-        print(self.f1(yv, res))
+        print('f1 score: {0}'.format(self.f1(yv, res)))
         pass
 
     def ViewModel(self):
