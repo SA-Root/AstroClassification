@@ -22,16 +22,16 @@ def walk_files(path, endpoint=None):
 
 if __name__ == '__main__':
 
-    # # 读取数据文件夹的地址
-    # wav_path = r".\data\first_train_data"
-    # # 读取数据
-    # data_x,serial_number = walk_files(wav_path, endpoint=".txt")
-    # data_x = np.array(data_x)
-    # serial_number = np.array(serial_number,dtype=np.int_)
-    # # 保存
-    # np.save(r".\data\first_train_data_x.npy",data_x)
-    # np.save(r".\data\first_train_data_serial_number.npy", serial_number)
-    #
+    # 读取数据文件夹的地址
+    wav_path = r".\data\first_train_data"
+    # 读取数据
+    data_x,serial_number = walk_files(wav_path, endpoint=".txt")
+    data_x = np.array(data_x)
+    serial_number = np.array(serial_number,dtype=np.int_)
+    # 保存
+    np.save(r".\data\first_train_data_x.npy",data_x)
+    np.save(r".\data\first_train_data_serial_number.npy", serial_number)
+    
     serial_number = np.load(r".\data\first_train_data_serial_number.npy")
     serial_number = list(serial_number)
     # print(serial_number)
