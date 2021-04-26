@@ -5,32 +5,17 @@ import tensorflow.keras.optimizers as tko
 import tensorflow.keras.losses as tkls
 import tensorflow.keras.callbacks as tkc
 from tensorflow.keras import backend as K
-from sklearn import model_selection
 import numpy as np
 
 
 def f1(y_true, y_pred):
     def recall(y_true, y_pred):
-        """Recall metric.
-
-        Only computes a batch-wise average of recall.
-
-        Computes the recall, a metric for multi-label classification of
-        how many relevant items are selected.
-        """
         true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
         possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
         recall = true_positives / (possible_positives + K.epsilon())
         return recall
 
     def precision(y_true, y_pred):
-        """Precision metric.
-
-        Only computes a batch-wise average of precision.
-
-        Computes the precision, a metric for multi-label classification of
-        how many selected items are relevant.
-        """
         true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
         predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
         precision = true_positives / (predicted_positives + K.epsilon())
@@ -51,24 +36,6 @@ class AstroModel:
                           allow_pickle=True)
         self.yv = np.load('data/yv.npy',
                           allow_pickle=True)
-        # tmp = []
-        # for i in self.y:
-        #     if i == 'star':
-        #         t = [1, 0, 0, 0]
-        #     elif i == 'unknown':
-        #         t = [0, 1, 0, 0]
-        #     elif i == 'galaxy':
-        #         t = [0, 0, 1, 0]
-        #     else:
-        #         t = [0, 0, 0, 1]
-        #     tmp.append(t)
-        # self.y = np.array(tmp)
-        # self.xt, self.xv, self.yt, self.yv = model_selection.train_test_split(
-        #     self.x, self.y, test_size=0.3)
-        # np.save('data/xt.npy', self.xt)
-        # np.save('data/xv.npy', self.xv)
-        # np.save('data/yt.npy', self.yt)
-        # np.save('data/yv.npy', self.yv)
         self.Build(ishape=input_shape)
         pass
 
@@ -233,8 +200,8 @@ class AstroModel:
             filepath=filepath,
             monitor='f1',
             save_weights_only=True,
-            period=100)
-        self.model.fit(x=self.xt, y=self.yt, batch_size=128, epochs=1000,
+            save_freq=5)
+        self.model.fit(x=self.xt, y=self.yt, batch_size=256, epochs=1000,
                        validation_data=(self.xv, self.yv), shuffle=True,
                        use_multiprocessing=True,
                        callbacks=[checkpoint])
@@ -243,26 +210,14 @@ class AstroModel:
     def Predict(self, x):
         return self.model.predict(x)
 
-    def LoadAndTest(self):
-        test = np.load('data/first_train_data_x.npy',
-                       allow_pickle=True).reshape([10000, 2600, 1, 1]).astype('float32')
-        y = np.load('data/first_train_data_y.npy',
-                    allow_pickle=True)
-        tmp = []
-        for i in y:
-            if i == 'star':
-                t = [1, 0, 0, 0]
-            elif i == 'unknown':
-                t = [0, 1, 0, 0]
-            elif i == 'galaxy':
-                t = [0, 0, 1, 0]
-            else:
-                t = [0, 0, 0, 1]
-            tmp.append(t)
-        y = np.array(tmp, dtype=np.float32)
+    def LoadAndValidate(self):
+        xv = np.load('data/xv.npy',
+                     allow_pickle=True)
+        yv = np.load('data/yv.npy',
+                     allow_pickle=True)
         self.model.load_weights('models/model_1000.h5')
-        res = self.Predict(test)
-        print(self.f1(y, res))
+        res = self.Predict(xv)
+        print(self.f1(yv, res))
         pass
 
     def ViewModel(self):
@@ -271,13 +226,6 @@ class AstroModel:
     def f1(self, y_true, y_pred):
 
         def recall():
-            """Recall metric.
-
-            Only computes a batch-wise average of recall.
-
-            Computes the recall, a metric for multi-label classification of
-            how many relevant items are selected.
-            """
             true_positives = 0
             possible_positives = 0
             for i in range(0, 10000):
@@ -289,14 +237,6 @@ class AstroModel:
             return rec
 
         def precision():
-            """Precision metric.
-
-            Only computes a batch-wise average of precision.
-
-            Computes the precision, a metric for multi-label classification of
-            how many selected items are relevant.
-            """
-            # true_positives = K.sum(y_true * y_pred)
             true_positives = 0
             predicted_positives = 0
             for i in range(0, 10000):
