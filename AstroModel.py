@@ -29,13 +29,13 @@ class AstroModel:
 
     def __init__(self, input_shape=(2600, 1, 1)):
         self.xt = np.load('data/xt.npy',
-                          allow_pickle=True)
+                          allow_pickle=True).astype(np.float32)
         self.yt = np.load('data/yt.npy',
-                          allow_pickle=True)
+                          allow_pickle=True).astype(np.float32)
         self.xv = np.load('data/xv.npy',
-                          allow_pickle=True)
+                          allow_pickle=True).astype(np.float32)
         self.yv = np.load('data/yv.npy',
-                          allow_pickle=True)
+                          allow_pickle=True).astype(np.float32)
         self.Build(ishape=input_shape)
         pass
 
@@ -181,10 +181,13 @@ class AstroModel:
         X = tkl.Flatten()(X)
         X = tkl.Dense(1024, activation='relu',
                       kernel_initializer=tki.glorot_uniform(seed=(921212)))(X)
+        X = tkl.Dropout(0.4)(X)
         X = tkl.Dense(512, activation='relu',
                       kernel_initializer=tki.glorot_uniform(seed=(921212)))(X)
+        X = tkl.Dropout(0.4)(X)
         X = tkl.Dense(256, activation='tanh',
                       kernel_initializer=tki.glorot_uniform(seed=(921212)))(X)
+        X = tkl.Dropout(0.4)(X)
         X = tkl.Dense(4, activation='softmax',
                       kernel_initializer=tki.glorot_uniform(seed=(921212)))(X)
 
@@ -200,7 +203,7 @@ class AstroModel:
             filepath=filepath,
             monitor='f1',
             save_weights_only=True,
-            save_freq=5)
+            period=100)
         self.model.fit(x=self.xt, y=self.yt, batch_size=256, epochs=1000,
                        validation_data=(self.xv, self.yv), shuffle=True,
                        use_multiprocessing=True,
@@ -212,12 +215,12 @@ class AstroModel:
 
     def LoadAndValidate(self):
         xv = np.load('data/xv.npy',
-                     allow_pickle=True)
+                     allow_pickle=True).astype(np.float32)
         yv = np.load('data/yv.npy',
-                     allow_pickle=True)
+                     allow_pickle=True).astype(np.float32)
         self.model.load_weights('models/model_1000.h5')
         res = self.Predict(xv)
-        print('f1 score: {0}'.format(self.f1(yv, res)))
+        print('f1 score: %.4f' % self.f1(yv, res))
         pass
 
     def ViewModel(self):
