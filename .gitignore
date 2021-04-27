@@ -5,3 +5,4 @@ data/*
 __pycache__/*
 iml/*
 models/*
+.ipynb_checkpoints/*

@@ -5,6 +5,7 @@ import tensorflow.keras.optimizers as tko
 import tensorflow.keras.losses as tkls
 import tensorflow.keras.callbacks as tkc
 from tensorflow.keras import backend as K
+import tensorflow_addons as tfa
 import numpy as np
 
 # star,unknown,galaxy,?
@@ -189,12 +190,13 @@ class AstroModel:
             save_weights_only=True,
             period=100)
         # star,unknown,galaxy,?
-        cweight = {0: 1.0, 1: 5.0, 2: 5.0, 3: 30.0}
-        self.model.fit(x=self.xt, y=self.yt, batch_size=350, epochs=1000,
+        cweight = {0: 1.0, 1: 10.0, 2: 10.0, 3: 100.0}
+        self.model.fit(x=self.xt, y=self.yt, batch_size=256, epochs=1000,
                        validation_data=(self.xv, self.yv), shuffle=True,
                        use_multiprocessing=True,
                        callbacks=[checkpoint],
-                       initial_epoch=iepoch)
+                       initial_epoch=iepoch,
+                       class_weight=cweight)
         pass
 
     def Predict(self, x):
@@ -207,52 +209,14 @@ class AstroModel:
                      allow_pickle=True).astype(np.float32)
         self.model.load_weights('models/model_1000.h5')
         res = self.Predict(xv)
-        print('f1 score: %.4f' % self.f1(yv, res))
+        f1s = tfa.metrics.F1Score(
+            num_classes=4, average='macro')
+        f1s.update_state(yv, res)
+        print('f1 score: %.4f' % f1s.result().numpy())
         pass
 
     def ViewModel(self):
         self.model.summary()
-
-    def f1(self, y_true, y_pred):
-
-        def recall():
-            true_positives = [0, 0, 0, 0]
-            possible_positives = [0, 0, 0, 0]
-            for i in range(0, 3000):
-                it = K.argmax(y_true[i] * y_pred[i]).numpy()
-                ip = K.argmax(y_true[i]).numpy()
-                if it == ip and K.max(y_true[i] * y_pred[i]).numpy() > 0.3:
-                    true_positives[it] += 1
-                possible_positives[ip] += 1
-            rec = [true_positives[i] * 1.0 / (possible_positives[i]+K.epsilon())
-                   for i in range(0, 4)]
-            return rec
-
-        def precision():
-            true_positives = [0, 0, 0, 0]
-            predicted_positives = [0, 0, 0, 0]
-            for i in range(0, 3000):
-                it = K.argmax(y_true[i] * y_pred[i]).numpy()
-                ip = K.argmax(y_pred[i]).numpy()
-                if it == ip and K.max(y_true[i] * y_pred[i]).numpy() > 0.3:
-                    true_positives[it] += 1
-                predicted_positives[ip] += 1
-            precision = [true_positives[i] * 1.0/(predicted_positives[i]+K.epsilon())
-                         for i in range(0, 4)]
-            return precision
-        precision = precision()
-        rec = recall()
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        print('star precision:{:.3f},recall:{:.3f}'.format(
-            precision[0], rec[0]))
-        print('unknown precision:{:.3f},recall:{:.3f}'.format(
-            precision[1], rec[1]))
-        print('galaxy precision:{:.3f},recall:{:.3f}'.format(
-            precision[2], rec[2]))
-        print('qso precision:{:.3f},recall:{:.3f}'.format(
-            precision[3], rec[3]))
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        return np.average([2*(precision[i]*rec[i])/(precision[i]+rec[i]+K.epsilon()) for i in range(0, 4)])
 
     def ContinueTraining(self, mdl, epoch=0):
         self.model.load_weights(mdl)
