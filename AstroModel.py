@@ -7,22 +7,7 @@ import tensorflow.keras.callbacks as tkc
 from tensorflow.keras import backend as K
 import numpy as np
 
-
-def f1(y_true, y_pred):
-    def recall(y_true, y_pred):
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-        recall = true_positives / (possible_positives + K.epsilon())
-        return recall
-
-    def precision(y_true, y_pred):
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-        precision = true_positives / (predicted_positives + K.epsilon())
-        return precision
-    precision = precision(y_true, y_pred)
-    recall = recall(y_true, y_pred)
-    return 2*((precision*recall)/(precision+recall+K.epsilon()))
+# star,unknown,galaxy,?
 
 
 class AstroModel:
@@ -192,22 +177,24 @@ class AstroModel:
                       kernel_initializer=tki.glorot_uniform(seed=(921212)))(X)
 
         self.model = tf.keras.Model(inputs=iL, outputs=X, name='AstroNet')
-        self.model.compile(optimizer=tko.SGD(learning_rate=0.001),
-                           metrics=[f1],
+        self.model.compile(optimizer=tko.SGD(learning_rate=0.002),
                            loss=tkls.categorical_crossentropy)
         pass
 
-    def Fit(self):
+    def Fit(self, iepoch=0):
         filepath = "model_{epoch:d}.h5"
         checkpoint = tkc.ModelCheckpoint(
             filepath=filepath,
             monitor='f1',
             save_weights_only=True,
             period=100)
-        self.model.fit(x=self.xt, y=self.yt, batch_size=256, epochs=1000,
+        # star,unknown,galaxy,?
+        cweight = {0: 1.0, 1: 5.0, 2: 5.0, 3: 30.0}
+        self.model.fit(x=self.xt, y=self.yt, batch_size=350, epochs=1000,
                        validation_data=(self.xv, self.yv), shuffle=True,
                        use_multiprocessing=True,
-                       callbacks=[checkpoint])
+                       callbacks=[checkpoint],
+                       initial_epoch=iepoch)
         pass
 
     def Predict(self, x):
@@ -229,27 +216,44 @@ class AstroModel:
     def f1(self, y_true, y_pred):
 
         def recall():
-            true_positives = 0
-            possible_positives = 0
+            true_positives = [0, 0, 0, 0]
+            possible_positives = [0, 0, 0, 0]
             for i in range(0, 3000):
-                true_positives += K.argmax(
-                    K.round(y_true[i] * y_pred[i])).numpy() > 0.7
-                possible_positives += K.argmax(
-                    K.round(y_true[i])).numpy() > 0.7
-            rec = true_positives*1.0 / (possible_positives + K.epsilon())
+                it = K.argmax(y_true[i] * y_pred[i]).numpy()
+                ip = K.argmax(y_true[i]).numpy()
+                if it == ip and K.max(y_true[i] * y_pred[i]).numpy() > 0.3:
+                    true_positives[it] += 1
+                possible_positives[ip] += 1
+            rec = [true_positives[i] * 1.0 / (possible_positives[i]+K.epsilon())
+                   for i in range(0, 4)]
             return rec
 
         def precision():
-            true_positives = 0
-            predicted_positives = 0
+            true_positives = [0, 0, 0, 0]
+            predicted_positives = [0, 0, 0, 0]
             for i in range(0, 3000):
-                true_positives += K.argmax(
-                    K.round(y_true[i] * y_pred[i])).numpy() > 0.7
-                predicted_positives += K.argmax(
-                    K.round(y_pred[i])).numpy() > 0.7
-            precision = true_positives * 1.0 / \
-                (predicted_positives + K.epsilon())
+                it = K.argmax(y_true[i] * y_pred[i]).numpy()
+                ip = K.argmax(y_pred[i]).numpy()
+                if it == ip and K.max(y_true[i] * y_pred[i]).numpy() > 0.3:
+                    true_positives[it] += 1
+                predicted_positives[ip] += 1
+            precision = [true_positives[i] * 1.0/(predicted_positives[i]+K.epsilon())
+                         for i in range(0, 4)]
             return precision
         precision = precision()
         rec = recall()
-        return 2*((precision*rec)/(precision+rec+K.epsilon()))
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('star precision:{:.3f},recall:{:.3f}'.format(
+            precision[0], rec[0]))
+        print('unknown precision:{:.3f},recall:{:.3f}'.format(
+            precision[1], rec[1]))
+        print('galaxy precision:{:.3f},recall:{:.3f}'.format(
+            precision[2], rec[2]))
+        print('qso precision:{:.3f},recall:{:.3f}'.format(
+            precision[3], rec[3]))
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        return np.average([2*(precision[i]*rec[i])/(precision[i]+rec[i]+K.epsilon()) for i in range(0, 4)])
+
+    def ContinueTraining(self, mdl, epoch=0):
+        self.model.load_weights(mdl)
+        self.Fit(epoch)
