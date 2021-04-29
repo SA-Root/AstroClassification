@@ -178,7 +178,7 @@ class AstroModel:
                       kernel_initializer=tki.glorot_uniform(seed=(921212)))(X)
 
         self.model = tf.keras.Model(inputs=iL, outputs=X, name='AstroNet')
-        self.model.compile(optimizer=tko.SGD(learning_rate=0.002),
+        self.model.compile(optimizer=tko.SGD(learning_rate=0.008),
                            loss=tkls.categorical_crossentropy)
         pass
 
@@ -190,8 +190,8 @@ class AstroModel:
             save_weights_only=True,
             period=100)
         # star,unknown,galaxy,?
-        cweight = {0: 1.0, 1: 10.0, 2: 10.0, 3: 100.0}
-        self.model.fit(x=self.xt, y=self.yt, batch_size=256, epochs=1000,
+        cweight = {0: 1.0, 1: 1.2, 2: 1.2, 3: 1.5}
+        self.model.fit(x=self.xt, y=self.yt, batch_size=350, epochs=300,
                        validation_data=(self.xv, self.yv), shuffle=True,
                        use_multiprocessing=True,
                        callbacks=[checkpoint],
@@ -212,6 +212,9 @@ class AstroModel:
         f1s = tfa.metrics.F1Score(
             num_classes=4, average='macro')
         f1s.update_state(yv, res)
+        tmp = f1s.true_positives.numpy()
+        tmp2 = (f1s.true_positives+f1s.false_negatives).numpy()
+        tmp3 = (f1s.true_positives+f1s.false_positives).numpy()
         print('f1 score: %.4f' % f1s.result().numpy())
         pass
 
